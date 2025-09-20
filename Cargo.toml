@@ -1,0 +1,23 @@
+[package]
+name = "gcra-rate-limiter"
+version = "0.1.0"
+edition = "2024"
+authors = ["Jeffery D. Mitchell", "<crusty-rustacean@gmail.com>"]
+description = "A rate limiter based on the Generic Cell Rate Algorithm (GCRA)."
+license = "MIT"
+repository = "https://github.com/crustyrustacean/gcra-rate-limiter"
+keywords = ["rate limiting", "GCRA", "algorithm", "throttling"]
+categories = ["network-programming", "algorithms"]
+readme = "README.md"
+publish = false
+
+[[bin]]
+name = "gcra-rate-limiter"
+path = "src/bin/main.rs"
+
+[lib]
+name = "gcra_rate_limiter"
+path = "src/lib/lib.rs"
+
+[dependencies]
+threadpool = "1.8.1"
