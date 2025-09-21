@@ -1,0 +1,79 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/28.1.2 Chrome/138.0.7204.243 Electron/37.4.0 Safari/537.36" version="28.1.2">
+  <diagram id="1TvRBlNIk8mu2UYg2NeB" name="GCRA Algorithm">
+    <mxGraphModel dx="1110" dy="746" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="Z41A2mIGXwHOxRp0dFwx-1" value="Request Arrives" style="rounded=1;whiteSpace=wrap;html=1;labelBackgroundColor=none;" vertex="1" parent="1">
+          <mxGeometry x="340" y="50" width="120" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="Z41A2mIGXwHOxRp0dFwx-2" value="Extract Client ID&#xa;Get Server Timestamp" style="rounded=0;whiteSpace=wrap;html=1;labelBackgroundColor=none;" vertex="1" parent="1">
+          <mxGeometry x="320" y="120" width="160" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="Z41A2mIGXwHOxRp0dFwx-3" value="Get Previous TAT&#xa;for Client&#xa;(default to current_time)" style="rounded=0;whiteSpace=wrap;html=1;labelBackgroundColor=none;" vertex="1" parent="1">
+          <mxGeometry x="320" y="200" width="160" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="Z41A2mIGXwHOxRp0dFwx-4" value="current_time ≥&#xa;TAT - τ ?" style="rhombus;whiteSpace=wrap;html=1;labelBackgroundColor=none;" vertex="1" parent="1">
+          <mxGeometry x="330" y="300" width="140" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="Z41A2mIGXwHOxRp0dFwx-5" value="Request ALLOWED" style="rounded=0;whiteSpace=wrap;html=1;labelBackgroundColor=none;" vertex="1" parent="1">
+          <mxGeometry x="160" y="420" width="120" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="Z41A2mIGXwHOxRp0dFwx-6" value="Update TAT:&#xa;TAT&#39; = max(current_time, TAT) + T" style="rounded=0;whiteSpace=wrap;html=1;labelBackgroundColor=none;" vertex="1" parent="1">
+          <mxGeometry x="140" y="490" width="160" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="Z41A2mIGXwHOxRp0dFwx-7" value="Store Updated TAT&#xa;for Client" style="rounded=0;whiteSpace=wrap;html=1;labelBackgroundColor=none;" vertex="1" parent="1">
+          <mxGeometry x="160" y="570" width="120" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="Z41A2mIGXwHOxRp0dFwx-8" value="Forward Request&#xa;to Next Handler" style="rounded=1;whiteSpace=wrap;html=1;labelBackgroundColor=none;" vertex="1" parent="1">
+          <mxGeometry x="160" y="650" width="120" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="Z41A2mIGXwHOxRp0dFwx-9" value="Request DENIED" style="rounded=0;whiteSpace=wrap;html=1;labelBackgroundColor=none;" vertex="1" parent="1">
+          <mxGeometry x="520" y="420" width="120" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="Z41A2mIGXwHOxRp0dFwx-10" value="Calculate Retry-After:&#xa;TAT - τ - current_time" style="rounded=0;whiteSpace=wrap;html=1;labelBackgroundColor=none;" vertex="1" parent="1">
+          <mxGeometry x="500" y="490" width="160" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="Z41A2mIGXwHOxRp0dFwx-11" value="Return HTTP 429&#xa;with Rate Limit Headers" style="rounded=1;whiteSpace=wrap;html=1;labelBackgroundColor=none;" vertex="1" parent="1">
+          <mxGeometry x="520" y="570" width="120" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="Z41A2mIGXwHOxRp0dFwx-12" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;labelBackgroundColor=none;fontColor=default;" edge="1" parent="1" source="Z41A2mIGXwHOxRp0dFwx-1" target="Z41A2mIGXwHOxRp0dFwx-2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Z41A2mIGXwHOxRp0dFwx-13" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;labelBackgroundColor=none;fontColor=default;" edge="1" parent="1" source="Z41A2mIGXwHOxRp0dFwx-2" target="Z41A2mIGXwHOxRp0dFwx-3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Z41A2mIGXwHOxRp0dFwx-14" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;labelBackgroundColor=none;fontColor=default;" edge="1" parent="1" source="Z41A2mIGXwHOxRp0dFwx-3" target="Z41A2mIGXwHOxRp0dFwx-4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Z41A2mIGXwHOxRp0dFwx-15" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;labelBackgroundColor=none;fontColor=default;" edge="1" parent="1" source="Z41A2mIGXwHOxRp0dFwx-4" target="Z41A2mIGXwHOxRp0dFwx-5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Z41A2mIGXwHOxRp0dFwx-16" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;labelBackgroundColor=none;fontColor=default;" edge="1" parent="1" source="Z41A2mIGXwHOxRp0dFwx-5" target="Z41A2mIGXwHOxRp0dFwx-6">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Z41A2mIGXwHOxRp0dFwx-17" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;labelBackgroundColor=none;fontColor=default;" edge="1" parent="1" source="Z41A2mIGXwHOxRp0dFwx-6" target="Z41A2mIGXwHOxRp0dFwx-7">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Z41A2mIGXwHOxRp0dFwx-18" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;labelBackgroundColor=none;fontColor=default;" edge="1" parent="1" source="Z41A2mIGXwHOxRp0dFwx-7" target="Z41A2mIGXwHOxRp0dFwx-8">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Z41A2mIGXwHOxRp0dFwx-19" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;labelBackgroundColor=none;fontColor=default;" edge="1" parent="1" source="Z41A2mIGXwHOxRp0dFwx-4" target="Z41A2mIGXwHOxRp0dFwx-9">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Z41A2mIGXwHOxRp0dFwx-20" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;labelBackgroundColor=none;fontColor=default;" edge="1" parent="1" source="Z41A2mIGXwHOxRp0dFwx-9" target="Z41A2mIGXwHOxRp0dFwx-10">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Z41A2mIGXwHOxRp0dFwx-21" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;labelBackgroundColor=none;fontColor=default;" edge="1" parent="1" source="Z41A2mIGXwHOxRp0dFwx-10" target="Z41A2mIGXwHOxRp0dFwx-11">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Z41A2mIGXwHOxRp0dFwx-22" value="YES" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;labelBackgroundColor=none;" vertex="1" parent="1">
+          <mxGeometry x="250" y="350" width="40" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="Z41A2mIGXwHOxRp0dFwx-23" value="NO" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;labelBackgroundColor=none;" vertex="1" parent="1">
+          <mxGeometry x="450" y="350" width="40" height="20" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
