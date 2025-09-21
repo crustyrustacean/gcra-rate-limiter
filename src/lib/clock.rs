@@ -1,12 +1,12 @@
 // src/lib/clock.rs
 
 // dependencies
-use std::time::{SystemTime, UNIX_EPOCH};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 pub trait Clock: Send + Sync {
-    fn now(&self) -> f64;
+    fn now(&self) -> u64;
 }
 
 // Default implementation using SystemTime
@@ -14,11 +14,11 @@ pub trait Clock: Send + Sync {
 pub struct SystemClock;
 
 impl Clock for SystemClock {
-    fn now(&self) -> f64 {
+    fn now(&self) -> u64 {
         SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_secs_f64()
+            .expect("System clock went backwards before Unix epoch")
+            .as_nanos() as u64
     }
 }
 
@@ -31,10 +31,10 @@ pub struct TestClock {
 impl TestClock {
     pub fn new(initial_time: f64) -> Self {
         Self {
-            time: Arc::new(AtomicU64::new((initial_time * 1_000_000_000.0) as u64))
+            time: Arc::new(AtomicU64::new((initial_time * 1_000_000_000.0) as u64)),
         }
     }
-    
+
     pub fn advance(&self, seconds: f64) {
         let nanos = (seconds * 1_000_000_000.0) as u64;
         self.time.fetch_add(nanos, Ordering::Relaxed);
@@ -42,7 +42,7 @@ impl TestClock {
 }
 
 impl Clock for TestClock {
-    fn now(&self) -> f64 {
-        self.time.load(Ordering::Relaxed) as f64 / 1_000_000_000.0
+    fn now(&self) -> u64 {
+        self.time.load(Ordering::Relaxed)
     }
 }

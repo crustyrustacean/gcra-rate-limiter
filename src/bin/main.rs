@@ -77,8 +77,11 @@ fn send_response(stream: &mut TcpStream, peer: SocketAddr, response: &str) {
 }
 
 /// Handle a single connection: read up to a limit, then write a simple HTTP response and close.
-fn handle_connection<T>(mut stream: TcpStream, peer: SocketAddr, limiter: Arc<RateLimiter<T, SystemClock>>)
-where
+fn handle_connection<T>(
+    mut stream: TcpStream,
+    peer: SocketAddr,
+    limiter: Arc<RateLimiter<T, SystemClock>>,
+) where
     T: Hash + Eq + Clone + From<IpAddr>,
 {
     println!("Handling connection from {}", peer);

@@ -37,9 +37,9 @@ where
     T: Hash + Eq + Clone,
     C: Clock,
 {
-    rate: f64,
-    burst: f64,
-    client_state: Arc<DashMap<T, f64>>,
+    rate_nanos: u64,
+    tolerance_nanos: u64,
+    client_state: Arc<DashMap<T, u64>>,
     clock: C,
 }
 
@@ -50,70 +50,92 @@ where
     C: Clock,
 {
     // method to create a new rate limiter given a desired rate and burst value
-    pub fn new(rate: f64, burst: f64, clock: C) -> Result<Self, RateLimiterError> {
+    pub fn new(
+        rate_per_second: f64,
+        burst_capacity: f64,
+        clock: C,
+    ) -> Result<Self, RateLimiterError> {
         // rate must be non-negative and not zero
-        if rate <= 0.0 {
+        if rate_per_second <= 0.0 {
             return Err(RateLimiterError::InvalidRate);
         }
         // burst parameter must be positive
-        if burst < 0.0 {
+        if burst_capacity < 0.0 {
             return Err(RateLimiterError::InvalidBurst);
         }
 
+        // Convert to nanoseconds
+        let rate_nanos = (1_000_000_000.0 / rate_per_second) as u64;
+        let tolerance_nanos = (burst_capacity * rate_nanos as f64) as u64;
+
         Ok(Self {
-            rate,
-            burst,
+            rate_nanos,
+            tolerance_nanos,
             client_state: Arc::new(DashMap::new()),
             clock,
         })
     }
 
     // Convenience constructor with default system clock
-    pub fn with_system_clock(rate: f64, burst: f64) -> Result<Self, RateLimiterError> 
-    where 
+    pub fn with_system_clock(rate: f64, burst: f64) -> Result<Self, RateLimiterError>
+    where
         C: Default,
     {
         Self::new(rate, burst, C::default())
     }
 
-    // accessor method to return the rate field
+    // accessor method to return the rate field (convert back to requests per second)
     pub fn rate(&self) -> f64 {
-        self.rate
+        1_000_000_000.0 / self.rate_nanos as f64
     }
 
-    // accessor method to return the burst field
+    // accessor method to return the burst field (convert back to burst capacity)
     pub fn burst(&self) -> f64 {
-        self.burst
+        self.tolerance_nanos as f64 / self.rate_nanos as f64
     }
 
-    // internal method to convert a rate to the "T" value
+    // internal method to get the increment in nanoseconds
+    #[allow(dead_code)]
+    fn increment_nanos(&self) -> u64 {
+        self.rate_nanos
+    }
+
+    // internal method to get the tolerance in nanoseconds
+    #[allow(dead_code)]
+    fn tolerance_nanos(&self) -> u64 {
+        self.tolerance_nanos
+    }
+
+    // Optional: keep the old method names for backwards compatibility
+    #[allow(dead_code)]
     fn increment(&self) -> f64 {
-        1.0 / self.rate
+        self.rate_nanos as f64 / 1_000_000_000.0
     }
 
-    // internal method to convert a rate to the "tau" value
+    #[allow(dead_code)]
     fn tolerance(&self) -> f64 {
-        self.burst * self.increment()
+        self.tolerance_nanos as f64 / 1_000_000_000.0
     }
 
     // method that implements the GCRA algorithm
     pub fn is_allowed(&self, client_id: T) -> Result<bool, RateLimiterError> {
-        let current_time = self.clock.now();
-        
-        // Get previous TAT, default to current_time for new clients
-        let previous_tat = self
+        let current_time_nanos = self.clock.now(); // Get nanoseconds
+
+        // Get previous TAT in nanoseconds, default to current time for new clients
+        let previous_tat_nanos = self
             .client_state
             .get(&client_id)
             .map(|entry| *entry.value())
-            .unwrap_or(current_time);
+            .unwrap_or(current_time_nanos);
 
-        // Core GCRA conformance test
-        let is_conforming = current_time >= previous_tat - self.tolerance();
+        // Core GCRA test using integer arithmetic
+        let is_conforming =
+            current_time_nanos >= previous_tat_nanos.saturating_sub(self.tolerance_nanos);
 
-        // Update TAT if request is allowed
         if is_conforming {
-            let new_tat = f64::max(current_time, previous_tat) + self.increment();
-            self.client_state.insert(client_id, new_tat);
+            // Update TAT: max(current_time, previous_tat) + increment
+            let new_tat_nanos = current_time_nanos.max(previous_tat_nanos) + self.rate_nanos;
+            self.client_state.insert(client_id, new_tat_nanos);
         }
 
         Ok(is_conforming)
@@ -135,16 +157,16 @@ mod tests {
     // Test clock implementation
     #[derive(Debug, Clone)]
     struct TestClock {
-        time: Arc<AtomicU64>, // Store as nanos for precision
+        time: Arc<AtomicU64>, // Store as nanos
     }
 
     impl TestClock {
         fn new(initial_time: f64) -> Self {
             Self {
-                time: Arc::new(AtomicU64::new((initial_time * 1_000_000_000.0) as u64))
+                time: Arc::new(AtomicU64::new((initial_time * 1_000_000_000.0) as u64)),
             }
         }
-        
+
         fn advance(&self, seconds: f64) {
             let nanos = (seconds * 1_000_000_000.0) as u64;
             self.time.fetch_add(nanos, Ordering::Relaxed);
@@ -154,11 +176,16 @@ mod tests {
             let nanos = (seconds * 1_000_000_000.0) as u64;
             self.time.store(nanos, Ordering::Relaxed);
         }
+
+        // Helper to get time as f64 for test assertions
+        fn time_as_f64(&self) -> f64 {
+            self.time.load(Ordering::Relaxed) as f64 / 1_000_000_000.0
+        }
     }
 
     impl Clock for TestClock {
-        fn now(&self) -> f64 {
-            self.time.load(Ordering::Relaxed) as f64 / 1_000_000_000.0
+        fn now(&self) -> u64 {
+            self.time.load(Ordering::Relaxed)
         }
     }
 
@@ -318,12 +345,39 @@ mod tests {
     #[test]
     fn test_clock_advances_time() {
         let clock = TestClock::new(5.0);
-        assert_eq!(clock.now(), 5.0);
-        
+        assert_eq!(clock.time_as_f64(), 5.0);
+
         clock.advance(2.5);
-        assert_eq!(clock.now(), 7.5);
-        
+        assert_eq!(clock.time_as_f64(), 7.5);
+
         clock.set_time(0.0);
-        assert_eq!(clock.now(), 0.0);
+        assert_eq!(clock.time_as_f64(), 0.0);
+    }
+
+    #[test]
+    fn accessor_methods_work() {
+        let clock = TestClock::new(0.0);
+        let limiter = RateLimiter::<String, _>::new(10.0, 5.0, clock).unwrap();
+
+        // Test that accessors return the original user-provided values
+        assert_eq!(limiter.rate(), 10.0);
+        assert_eq!(limiter.burst(), 5.0);
+    }
+
+    #[test]
+    fn nanosecond_precision() {
+        let clock = TestClock::new(0.0);
+        let limiter = RateLimiter::new(1_000_000.0, 0.0, clock.clone()).unwrap(); // 1M req/sec
+        let client = "client1";
+
+        // First request should be allowed
+        assert!(limiter.is_allowed(client).unwrap());
+
+        // Second request immediately should be blocked
+        assert!(!limiter.is_allowed(client).unwrap());
+
+        // Advance by exactly 1 microsecond (1000 nanoseconds)
+        clock.advance(0.000001);
+        assert!(limiter.is_allowed(client).unwrap());
     }
 }
