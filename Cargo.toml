@@ -1,6 +1,6 @@
 [package]
 name = "gcra-rate-limiter"
-version = "0.3.0"
+version = "0.4.0"
 edition = "2024"
 authors = ["Jeffery D. Mitchell", "<crusty-rustacean@gmail.com>"]
 description = "A rate limiter based on the Generic Cell Rate Algorithm (GCRA)."
@@ -20,5 +20,5 @@ name = "gcra_rate_limiter"
 path = "src/lib/lib.rs"
 
 [dependencies]
-parking_lot = "0.12.4"
+dashmap = "6.1.0"
 threadpool = "1.8.1"

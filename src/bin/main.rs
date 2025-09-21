@@ -1,13 +1,12 @@
 // src/bin/main.rs
 
 // dependencies
-use gcra_rate_limiter::RateLimiter;
+use gcra_rate_limiter::{RateLimiter, SystemClock};
 use std::error::Error;
 use std::hash::Hash;
 use std::io::{Read, Write};
 use std::net::{IpAddr, SocketAddr, TcpListener, TcpStream};
 use std::sync::Arc;
-use std::time::{SystemTime, UNIX_EPOCH};
 use threadpool::ThreadPool;
 
 fn handle_allowed_request(stream: &mut TcpStream, peer: SocketAddr) {
@@ -78,23 +77,17 @@ fn send_response(stream: &mut TcpStream, peer: SocketAddr, response: &str) {
 }
 
 /// Handle a single connection: read up to a limit, then write a simple HTTP response and close.
-fn handle_connection<T>(mut stream: TcpStream, peer: SocketAddr, limiter: Arc<RateLimiter<T>>)
+fn handle_connection<T>(mut stream: TcpStream, peer: SocketAddr, limiter: Arc<RateLimiter<T, SystemClock>>)
 where
     T: Hash + Eq + Clone + From<IpAddr>,
 {
     println!("Handling connection from {}", peer);
 
-    // Get current timestamp
-    let current_time = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_secs_f64();
-
     // Use IP address as client ID
     let client_id = peer.ip();
 
     // Check rate limit
-    match limiter.is_allowed(client_id.into(), current_time) {
+    match limiter.is_allowed(client_id.into()) {
         Ok(true) => {
             // Request allowed - proceed normally
             handle_allowed_request(&mut stream, peer);
@@ -161,7 +154,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let pool = ThreadPool::new(8);
 
     // Create shared rate limiter - 5 requests per second, burst of 10
-    let rate_limiter = Arc::new(RateLimiter::<IpAddr>::new(2.0, 0.0).unwrap());
+    let rate_limiter = Arc::new(RateLimiter::<IpAddr>::with_system_clock(2.0, 0.0).unwrap());
 
     for stream_res in listener.incoming() {
         match stream_res {
