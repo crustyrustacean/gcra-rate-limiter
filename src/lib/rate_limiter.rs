@@ -1,17 +1,18 @@
 // lib/rate_limiter.rs
 
 // dependencies
+use parking_lot::Mutex;
 use std::collections::HashMap;
 use std::error::Error;
 use std::fmt;
-use std::sync::{Arc, Mutex};
+use std::hash::Hash;
+use std::sync::Arc;
 
 // enum type to represent errors related to the rate limiter type
 #[derive(Debug)]
 pub enum RateLimiterError {
-    InvalidRate,   // for rate <= 0
-    InvalidBurst,  // for burst < 0
-    MutexPoisoned, // if there's an issue with the Mutex
+    InvalidRate,  // for rate <= 0
+    InvalidBurst, // for burst < 0
 }
 
 // implement the Display trait for the RateLimiterError type
@@ -20,7 +21,6 @@ impl fmt::Display for RateLimiterError {
         match self {
             RateLimiterError::InvalidRate => write!(f, "Rate must be positive"),
             RateLimiterError::InvalidBurst => write!(f, "Burst must be non-negative"),
-            RateLimiterError::MutexPoisoned => write!(f, "Internal state lock was poisoned"),
         }
     }
 }
@@ -30,14 +30,20 @@ impl Error for RateLimiterError {}
 
 // struct type to represent a rate limiter
 #[derive(Debug)]
-pub struct RateLimiter {
+pub struct RateLimiter<T>
+where
+    T: Hash + Eq + Clone,
+{
     rate: f64,
     burst: f64,
-    client_state: Arc<Mutex<HashMap<String, f64>>>,
+    client_state: Arc<Mutex<HashMap<T, f64>>>,
 }
 
 // methods for the RateLimiter struct
-impl RateLimiter {
+impl<T> RateLimiter<T>
+where
+    T: Hash + Eq + Clone,
+{
     // method to create a new rate limiter given a desired rate and burst value
     pub fn new(rate: f64, burst: f64) -> Result<Self, RateLimiterError> {
         // rate must be non-negative and not zero
@@ -57,12 +63,12 @@ impl RateLimiter {
     }
 
     // accessor method to return the rate field
-    pub fn get_rate(&self) -> f64 {
+    pub fn rate(&self) -> f64 {
         self.rate
     }
 
     // accessor method to return the burst field
-    pub fn get_burst(&self) -> f64 {
+    pub fn burst(&self) -> f64 {
         self.burst
     }
 
@@ -77,15 +83,12 @@ impl RateLimiter {
     }
 
     // method that implements the GCRA algorithm
-    pub fn is_allowed(&self, client_id: &str, current_time: f64) -> Result<bool, RateLimiterError> {
+    pub fn is_allowed(&self, client_id: T, current_time: f64) -> Result<bool, RateLimiterError> {
         // get access to the client state
-        let mut state = self
-            .client_state
-            .lock()
-            .map_err(|_| RateLimiterError::MutexPoisoned)?;
+        let mut state = self.client_state.lock();
 
         // Get previous TAT, default to current_time for new clients
-        let previous_tat = state.get(client_id).copied().unwrap_or(current_time);
+        let previous_tat = state.get(&client_id).copied().unwrap_or(current_time);
 
         // Core GCRA conformance test
         let is_conforming = current_time >= previous_tat - self.tolerance();
@@ -93,7 +96,7 @@ impl RateLimiter {
         // Update TAT if request is allowed
         if is_conforming {
             let new_tat = f64::max(current_time, previous_tat) + self.increment();
-            state.insert(client_id.to_string(), new_tat);
+            state.insert(client_id, new_tat);
         }
 
         Ok(is_conforming)
@@ -106,21 +109,21 @@ mod tests {
 
     #[test]
     fn constructor_rejects_zero_rate() {
-        let result = RateLimiter::new(0.0, 1.0);
+        let result = RateLimiter::<String>::new(0.0, 1.0);
         assert!(result.is_err());
         assert!(matches!(result.unwrap_err(), RateLimiterError::InvalidRate));
     }
 
     #[test]
     fn constructor_rejects_negative_rate() {
-        let result = RateLimiter::new(-1.0, 1.0);
+        let result = RateLimiter::<String>::new(-1.0, 1.0);
         assert!(result.is_err());
         assert!(matches!(result.unwrap_err(), RateLimiterError::InvalidRate));
     }
 
     #[test]
     fn constructor_rejects_negative_burst() {
-        let result = RateLimiter::new(1.0, -1.0);
+        let result = RateLimiter::<String>::new(1.0, -1.0);
         assert!(result.is_err());
         assert!(matches!(
             result.unwrap_err(),
@@ -130,13 +133,13 @@ mod tests {
 
     #[test]
     fn constructor_accepts_valid_parameters() {
-        let result = RateLimiter::new(10.0, 5.0);
+        let result = RateLimiter::<String>::new(10.0, 5.0);
         assert!(result.is_ok());
     }
 
     #[test]
     fn constructor_accepts_zero_burst() {
-        let result = RateLimiter::new(1.0, 0.0);
+        let result = RateLimiter::<String>::new(1.0, 0.0);
         assert!(result.is_ok());
     }
 
